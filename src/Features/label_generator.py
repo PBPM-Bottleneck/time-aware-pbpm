@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from .label_generator import add_bottleneck_labels
 
 def generate_bottleneck_labels(df: pd.DataFrame, time_col: str = "remaining_time", threshold_factor: float = 1.5):
     """

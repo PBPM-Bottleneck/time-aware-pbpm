@@ -186,45 +186,29 @@ class Preprocess:
         self.fold3_t4 = fold3_t4
 
     # Calculates the time divisors
-    def divisor_cal(self, spamreader):
+ def divisor_cal(self, spamreader):
+        """
+        Takes a numpy array (list of lists) as input and computes
+        three time divisors for normalization.
+        """
 
-        """Takes a numpy array as input and returns the time divisors
+        # --- NEUER BLOCK: DataFrame-Conversion & Engpass-Features ---
+        df = pd.DataFrame(spamreader,
+                          columns=["CaseID", "ActivityID", "CompleteTimestamp"])
+        df["CompleteTimestamp"] = pd.to_datetime(df["CompleteTimestamp"])
 
-    # --- NEUER BLOCK: DataFrame-Conversion & Engpass-Features ---
-    # spamreader ist Liste von [CaseID, ActivityID, Timestamp]-Zeilen
-    df = pd.DataFrame(spamreader, columns=["CaseID", "ActivityID", "CompleteTimestamp"])
-    df["CompleteTimestamp"] = pd.to_datetime(df["CompleteTimestamp"])
+        # 1) Bottleneck-Labels hinzufügen
+        df = add_bottleneck_labels(df, time_col="remaining_time")
+        # 2) Queue-Length-Feature hinzufügen
+        df = add_queue_length_feature(
+            df,
+            case_id_col="CaseID",
+            timestamp_col="CompleteTimestamp"
+        )
 
-    # 1) Bottleneck-Labels hinzufügen
-    df = add_bottleneck_labels(df, time_col="remaining_time")
-    # 2) Queue-Length-Feature hinzufügen
-    df = add_queue_length_feature(df,
-                                  case_id_col="CaseID",
-                                  timestamp_col="CompleteTimestamp")
-
-    # zurückwandeln in List-of-Lists für den bestehenden Loop
-    spamreader = df.values.tolist()
-    # --- ENDE neuer Block ---
-    
-        Parameters
-
-        --------------
-        spamreader: obj
-            Structured eventlog as like a numpy array obj.
-
-        *****Helper Variables******
-        line: char
-            helps to store each encoded activity after iteration
-        times: list
-            helps to store each time difference between two activities after iteration
-        times2: list
-            helps to store time difference between starting and current activity after each iteration
-        casestarttime: float
-            helper variable
-        lasteventtime: float
-            helper variable
-        lastcase: char
-            helper variable
+        # zurückwandeln in List-of-Lists für den bestehenden Loop
+        spamreader = df.values.tolist()
+        # --- ENDE neuer Block ---
 
         Returns
         ---------------

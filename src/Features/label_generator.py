@@ -29,3 +29,28 @@ def add_bottleneck_labels(df: pd.DataFrame, time_col: str = "remaining_time"):
     """
     df['bottleneck_label'] = generate_bottleneck_labels(df, time_col)
     return df
+
+def add_queue_length_feature(df, case_id_col='case_id', timestamp_col='timestamp'):
+    """
+    Fügt dem DataFrame eine Spalte 'queue_length' hinzu, die 
+    die Anzahl paralleler, aktiver Fälle zum Zeitpunkt jedes Events zählt.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Eventlog mit Spalten für Case-ID und Zeitstempel.
+    case_id_col : str
+        Name der Spalte mit der Case-ID.
+    timestamp_col : str
+        Name der Spalte mit dem Zeitstempel.
+        
+    Returns
+    -------
+    pd.DataFrame
+        Kopie des DataFrames mit neuer Spalte 'queue_length'.
+    """
+    df = df.copy()
+    # Zähle pro Zeitstempel die Anzahl eindeutiger Fälle und ziehe den eigenen Fall ab
+    concurrent = df.groupby(timestamp_col)[case_id_col].transform('nunique')
+    df['queue_length'] = concurrent - 1
+    return df

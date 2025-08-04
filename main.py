@@ -13,7 +13,9 @@ from src.Models.Model import *
 from src.Models.Test import NextStep
 from src.Evaluates.Evaluate import Nextstep_eval
 from tensorboard.plugins.hparams import api as hp
-
+import pandas as pd
+from src.Features.Preprocess import Preprocess
+from src.Features.label_generator import add_bottleneck_labels, add_queue_length_feature
 
 """
 main.py
@@ -132,6 +134,32 @@ if choice == '1' or choice =='Train' or choice == '1.Train':
     #F.name is the name of the file
     #F.spamread is the data of the file
     spamreader,max_task = F.log2np()
+    # --- NEUER BLOCK: DataFrame-Workflow für Engpass-Features ---
+    # Baue aus dem list-of-lists `spamreader` einen DataFrame
+    df = pd.DataFrame(spamreader, columns=["CaseID", "ActivityID", "CompleteTimestamp"])
+
+    # Stelle sicher, dass du die Timestamp-Spalte parsed
+    df["CompleteTimestamp"] = pd.to_datetime(df["CompleteTimestamp"])
+
+    # 1) Remaining Time berechnen
+    df["remaining_time"] = (
+    df.groupby("CaseID")["CompleteTimestamp"]
+      .transform("max")
+    - df["CompleteTimestamp"]
+    ).dt.total_seconds()
+
+    # 2) Deine neuen Features hinzufügen
+    df = add_bottleneck_labels(df, time_col="remaining_time")
+    df = add_queue_length_feature(
+    df,
+    case_id_col="CaseID",
+    timestamp_col="CompleteTimestamp"
+    )
+
+    # 3) Wieder zurück in list-of-lists für Preprocess
+    spamreader = df[["CaseID","ActivityID","CompleteTimestamp"]].values.tolist()
+    # --- ENDE DataFrame-Workflow ---
+
     D=Preprocess()
     divisor,divisor2,divisor3 = D.divisor_cal(spamreader)
     maxlen,chars,target_chars,char_indices,indices_char,target_char_indices,target_indices_char= D.dict_cal()
